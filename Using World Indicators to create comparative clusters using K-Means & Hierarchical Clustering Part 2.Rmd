@@ -1,0 +1,812 @@
+---
+title: "Task_2_Project1"
+Group Members: "Aartee Simran Dhomeja"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+markdown::markdownToHTML
+```
+
+```{r}
+#Libraries
+library(fpc)
+library(readr)
+library(stringr)
+library(factoextra)
+library(plotly)
+library(tidyverse)
+library(NbClust)
+library(philentropy)
+library(clValid)
+library(kohonen)
+library(ClusterR)
+```
+
+```{r}
+#Data Set
+World_Indicators<- read.csv('D:/FDA/Project 1/World Indicators.csv')
+
+```
+
+```{r}
+#First Analysis
+#GDP & Infant Mortality Rate
+
+#Clean the data to only include required columns
+World_IndicatorsGI <- World_Indicators[c(6,10,21)]
+
+#Remove NAs from the data set
+World_IndicatorsGI <- World_IndicatorsGI %>% drop_na()
+
+
+#Determine the optimal number of clusters using the silhouette method
+fviz_nbclust(World_IndicatorsGI[,1:2], kmeans, method = "silhouette")
+
+#Determine the optimal number of clusters using the elbow method
+fviz_nbclust(World_IndicatorsGI[,1:2], kmeans, method = "wss")
+
+#Find the kmeans of GDP and Infant Mortality
+set.seed(55)
+cluster.World_IndicatorsGI <- kmeans(World_IndicatorsGI[,1:2], 2, nstart = 20)
+cluster.World_IndicatorsGI
+cluster.World_IndicatorsGI$cluster
+
+#Graph of the GDP & Infectant Mortality Clustered
+cluster.World_IndicatorsGI$cluster <- as.factor(cluster.World_IndicatorsGI$cluster)
+
+WIGI_Clustered <- plot_ly(World_IndicatorsGI, x = ~GDP, 
+                          y = ~ Infant.Mortality.Rate, 
+                          color = ~cluster.World_IndicatorsGI$cluster)
+
+WIGI_Clustered <- WIGI_Clustered %>% add_markers()
+WIGI_Clustered <- WIGI_Clustered %>% layout(scene = 
+                                              list(xaxis = list(title = 'X1'),
+                                                   yaxis = list(title = 'X2')))
+WIGI_Clustered <- WIGI_Clustered %>% layout(title = 'GDP vs. Infant Mortality Clustered')
+
+WIGI_Clustered # plot 
+
+
+#Hierarchical Clustering
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm_Gdp_infant <- dist(World_IndicatorsGI[,1:2], method = 'euclidean')
+
+# Hierarchical Clustering
+
+set.seed(50)
+hc_Gdp_infant <- hclust(dm_Gdp_infant,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc_Gdp_infant_dendogram <- plot(hc_Gdp_infant, main = "GDP Vs Infant.Mortality.Rate Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+fit_Gdp_infant <- cutree(hc_Gdp_infant, k = 2)
+rect.hclust(hc_Gdp_infant, k = 2, border = "red")
+
+#Binding the data
+World_IndicatorsGI <- cbind(World_IndicatorsGI, fit_Gdp_infant)
+
+#Plotting hierarchical clusters
+
+World_IndicatorsGI_hc_plot <- plot_ly(World_IndicatorsGI, x = ~GDP, y = ~Infant.Mortality.Rate, color = ~as.factor(World_IndicatorsGI$fit_Gdp_infant))
+World_IndicatorsGI_hc_plot <- World_IndicatorsGI_hc_plot %>% add_markers()
+World_IndicatorsGI_hc_plot <- World_IndicatorsGI_hc_plot %>% layout(title = 'GDP Vs Infant.Mortality.Rate hierarchical Clustered')
+World_IndicatorsGI_hc_plot
+
+#Self Organizing Maps - 
+
+#Create the model
+World_IndicatorsGI_SOM <- as.matrix(scale(World_IndicatorsGI[,1:2]))
+World_IndicatorsGI_Grid <- somgrid(xdim = 5, ydim = 5, topo = "rectangular")
+set.seed(55)
+World_IndicatorsGI_SOM_Model <- som(X = World_IndicatorsGI_SOM, grid = World_IndicatorsGI_Grid)
+
+#Plot the model
+plot(World_IndicatorsGI_SOM_Model, type = "counts")
+
+plot(World_IndicatorsGI_SOM_Model, type = "mapping")
+
+plot(World_IndicatorsGI_SOM_Model, type = "codes")
+
+
+#ADD INTERNAL VALIDATION 
+#validation for 2 clusters
+calinhara(World_IndicatorsGI[,1:2],cluster.World_IndicatorsGI$cluster,cn=2)
+
+#validation for 3
+cluster.World_IndicatorsGI_3 <- kmeans(World_IndicatorsGI[,1:2], 3, nstart = 20)
+cluster.World_IndicatorsGI_3
+calinhara(World_IndicatorsGI[,1:2],cluster.World_IndicatorsGI_3$cluster,cn=3)
+
+#validation for 4
+cluster.World_IndicatorsGI_4 <- kmeans(World_IndicatorsGI[,1:2], 4, nstart = 20)
+cluster.World_IndicatorsGI_4
+calinhara(World_IndicatorsGI[,1:2],cluster.World_IndicatorsGI_4$cluster,cn=4)
+
+##################### Post CH Value Plot ##########################
+WIGI_Clustered_CH <- plot_ly(World_IndicatorsGI, x = ~GDP, 
+                             y = ~Infant.Mortality.Rate, 
+                             color = ~cluster.World_IndicatorsGI_4$cluster)
+WIGI_Clustered_CH <- WIGI_Clustered_CH %>% add_markers()
+WIGI_Clustered_CH <- WIGI_Clustered_CH %>% layout(scene = 
+                                                    list(xaxis = list(title = 'X1'),
+                                                         yaxis = list(title = 'X2')))
+WIGI_Clustered_CH <- WIGI_Clustered_CH %>% layout(
+  title = 'GDP vs. Infant Mortality Clustered')
+
+WIGI_Clustered_CH # plot 
+
+
+
+#add dunn index and ch value
+
+unique(World_IndicatorsGI$Clust)
+typeof(cluster.World_IndicatorsGI$cluster)
+cluster.World_IndicatorsGI$cluster<-as.numeric(
+  cluster.World_IndicatorsGI$cluster)
+cluster.stats(dist(World_IndicatorsGI[,1:2],method ='euclidean'),
+              cluster.World_IndicatorsGI$cluster)
+
+#cluster.World_IndicatorsGI$cluster<-as.numeric(cluster.World_IndicatorsGI$cluster)
+
+x=dunn(clusters = cluster.World_IndicatorsGI$cluster, 
+       Data = World_IndicatorsGI[,1:2])
+cat("The value for dunn index is ,",x,"")
+
+#Combine clusters with original table
+World_IndicatorsGI$Clust <- cluster.World_IndicatorsGI$cluster
+World_IndicatorsGI$Clust_CH <- cluster.World_IndicatorsGI_4$cluster
+World_IndicatorsGI_Sub1<-subset(World_IndicatorsGI,Clust_CH==1)
+World_IndicatorsGI_Sub2<-subset(World_IndicatorsGI,Clust_CH==2)
+World_IndicatorsGI_Sub3<-subset(World_IndicatorsGI,Clust_CH==3)
+World_IndicatorsGI_Sub4<-subset(World_IndicatorsGI,Clust_CH==4)
+print(World_IndicatorsGI_Sub1,World_IndicatorsGI_Sub2,World_IndicatorsGI_Sub3,World_IndicatorsGI_Sub4)
+#World_IndicatorsGI_Sub1
+
+#China, Japan, and USA represent cluster 1, all other countries (excluding NA) are represented by cluster 2.
+
+
+```
+# the first analysis focuses on the link between GDP of a country and its infant mortality rate. The optimal number of clusters according to KMeans and Silhoutte is 2 but according to the CH Value, 4 is the ideal number of clusters. 
+The Dunn Index and external validation has always been carried out. After clustering and plotting the same it could be analyzed that countries with minimal to low GDP have high infant mortality as compared to those with higher amount of gdp. For Example countries like fall in the second 2nd cluster for mortality
+
+```{r}
+#Second Analysis
+#GDP vs HealthCapita
+
+#Data
+#World_Indicators <- read.csv("/Users/kailash/Downloads/World Indicators (2).csv")
+
+##########Scaling ######################
+
+World_Indicators_GH<- World_Indicators %>% select(GDP,Health.Exp.Capita,
+                                                  Country)
+World_Indicators_GH<-na.omit(World_Indicators_GH)
+#class(World_Indicators_GH$Health.Exp.Capita)
+
+World_Indicators_GH$Health.Exp.Capita <- as.numeric(World_Indicators_GH$Health.Exp.Capita)
+
+World_Indicators_GH <- World_Indicators_GH %>% drop_na()
+
+World_Indicators_GHS<-as.data.frame(scale(World_Indicators_GH[,1:2]))
+#DF<-as.data.frame(scale(World_Indicators_Scaling[,1:2]))
+World_Indicators_GHS$Country<-World_Indicators_GH$Country
+
+#############
+#GDP & Health Exp/Capita
+
+
+#Determine the optimal number of clusters using the silhouette method
+fviz_nbclust(World_Indicators_GHS[,1:2], kmeans, method = "silhouette")
+
+#Determine the optimal number of clusters using the elbow method
+fviz_nbclust(World_Indicators_GHS[,1:2], kmeans, method = "wss")
+
+#Find the kmeans of GDP and Infant Mortality
+set.seed(55)
+cluster.World_Indicators_GHS <- kmeans(World_Indicators_GHS[,1:2], 2, nstart = 20)
+cluster.World_Indicators_GHS
+
+#Graph of the GDP & Infectant Mortality Clustered
+cluster.World_Indicators_GHS$cluster <- as.factor(
+  cluster.World_Indicators_GHS$cluster)
+colnames(World_Indicators_GHS)
+WIGHS_Clustered <- plot_ly(World_Indicators_GHS, x = ~GDP, 
+                           y = ~Health.Exp.Capita, 
+                           color = ~cluster.World_Indicators_GHS$cluster)
+WIGHS_Clustered <- WIGHS_Clustered %>% add_markers()
+WIGHS_Clustered <- WIGHS_Clustered %>% layout(scene = 
+                                                list(xaxis = list(title = 'X1'),
+                                                     yaxis = list(title = 'X2')))
+WIGHS_Clustered <- WIGHS_Clustered %>% layout(
+  title = 'GDP vs. Health.Exp.Capita')
+
+WIGHS_Clustered # plot 
+
+#Hierarchical Clustering
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm_Gdp_healthcapita <- dist(World_Indicators_GHS[,1:2], method = 'euclidean')
+
+# Hierarchical Clustering
+
+set.seed(50)
+hc_Gdp_healthcapita <- hclust(dm_Gdp_healthcapita,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc_Gdp_healthcapita_dendogram <- plot(hc_Gdp_healthcapita, main = "GDP Vs Health.Capita Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+#Since there is only 2 clusters we couldn't see the cut tree line
+fit_Gdp_healthcapita <- cutree(hc_Gdp_healthcapita, k = 2)
+#table(fit8, Data8$Class)
+rect.hclust(hc_Gdp_healthcapita, k = 2, border = "red")
+
+#Binding the data
+World_Indicators_GHS <- cbind(World_Indicators_GHS, fit_Gdp_healthcapita)
+
+#Plotting hierarchical clusters
+
+World_IndicatorsGHS_hc_plot <- plot_ly(World_Indicators_GHS, x = ~GDP, y = ~Health.Exp.Capita, color = ~as.factor(World_Indicators_GHS$fit_Gdp_healthcapita))
+World_IndicatorsGHS_hc_plot <- World_IndicatorsGHS_hc_plot %>% add_markers()
+World_IndicatorsGHS_hc_plot <- World_IndicatorsGHS_hc_plot %>% layout(title = 'GDP Vs Infant.Mortality.Rate hierarchical Clustered')
+World_IndicatorsGHS_hc_plot
+
+#Self Organizing Maps - 
+
+#Create the model
+World_Indicators_GHS_SOM <- as.matrix(scale(World_Indicators_GHS[,1:2]))
+World_Indicators_GHS_Grid <- somgrid(xdim = 5, ydim = 5, topo = "rectangular")
+set.seed(55)
+World_Indicators_GHS_SOM_Model <- som(X = World_Indicators_GHS_SOM, grid = World_Indicators_GHS_Grid)
+
+#Plot the model
+plot(World_Indicators_GHS_SOM_Model, type = "counts")
+
+plot(World_Indicators_GHS_SOM_Model, type = "mapping")
+
+plot(World_Indicators_GHS_SOM_Model, type = "codes")
+
+
+#ADD INTERNAL VALIDATION 
+#validation for 2 clusters
+calinhara(World_Indicators_GHS[,1:2],cluster.World_Indicators_GHS$cluster,cn=2)
+#validation for 3
+cluster.World_Indicators_GHS_3 <- kmeans(World_Indicators_GHS[,1:2], 3, 
+                                         nstart = 20)
+cluster.World_Indicators_GHS_3
+calinhara(World_Indicators_GHS[,1:2],cluster.World_Indicators_GHS_3$
+            cluster,cn=3)
+
+#validation for 4
+cluster.World_Indicators_GHS_4 <- kmeans(World_Indicators_GHS[,1:2], 4, 
+                                         nstart = 20)
+cluster.World_Indicators_GHS_4
+calinhara(World_Indicators_GHS[,1:2],cluster.World_Indicators_GHS_4$
+            cluster,cn=4)
+colnames(World_Indicators_GHS)
+
+##################### Post CH Value Plot ##########################
+WIGHS_Clustered_CH <- plot_ly(World_Indicators_GHS, x = ~GDP, 
+                              y = ~Health.Exp.Capita, 
+                              color = ~cluster.World_Indicators_GHS_4$cluster)
+WIGHS_Clustered_CH <- WIGHS_Clustered_CH %>% add_markers()
+WIGHS_Clustered_CH <- WIGHS_Clustered_CH %>% layout(scene = 
+                                                      list(xaxis = list(title = 'X1'),
+                                                           yaxis = list(title = 'X2')))
+WIGHS_Clustered_CH <- WIGHS_Clustered_CH %>% layout(
+  title = 'GDP vs. Health Capita')
+
+WIGHS_Clustered_CH # plot 
+
+
+
+#typeof(cluster.World_IndicatorsGI)
+
+#add dunn index
+
+unique(World_Indicators_GHS$Clust)
+typeof(cluster.World_Indicators_GHS$cluster)
+cluster.World_Indicators_GHS$cluster<-as.numeric(
+  cluster.World_Indicators_GHS$cluster)
+cluster.stats(dist(World_Indicators_GHS[,1:2],method ='euclidean'),
+              cluster.World_Indicators_GHS$cluster)
+
+cluster.World_Indicators_GHS$cluster<-as.numeric(
+  cluster.World_Indicators_GHS$cluster)
+
+x=dunn(clusters = cluster.World_Indicators_GHS$cluster, 
+       Data = World_Indicators_GHS[,1:2])
+cat("The value for dunn index is ,",x,"")
+
+#Combine clusters with original table
+World_Indicators_GHS$Clust <- cluster.World_Indicators_GHS$cluster
+
+
+
+World_Indicators_GHS$Clust_CH<-cluster.World_Indicators_GHS_4$cluster
+
+World_Indicators_GHS_Sub1<-subset(World_Indicators_GHS,Clust_CH==1)
+World_Indicators_GHS_Sub2<-subset(World_Indicators_GHS,Clust_CH==2)
+World_Indicators_GHS_Sub3<-subset(World_Indicators_GHS,Clust_CH==3)
+World_Indicators_GHS_Sub4<-subset(World_Indicators_GHS,Clust_CH==4)
+print(World_Indicators_GHS_Sub1,World_Indicators_GHS_Sub2,World_Indicators_GHS_Sub3,World_Indicators_GHS_Sub4)
+```
+Task 2: The above analysis caters to the analysis between gdp and health exp per capita. The expenditure varies country to country but is not heavily reliant on GDP. The health expenditure seems high even in low gdp and in some countries there is a very little spent on healthcare.
+```{r}
+#Analysis 3
+
+#Data
+#World_Indicators <- read.csv("/Users/kailash/Downloads/World Indicators (2).csv")
+
+##########Scaling ######################
+
+World_Indicators_GB<- World_Indicators %>% select(GDP, Business.Tax.Rate,
+                                                  Country)
+typeof(World_Indicators_GB$Business.Tax.Rate)
+World_Indicators_GB<-na.omit(World_Indicators_GB)
+
+World_Indicators_GBS<-as.data.frame(scale(World_Indicators_GB[,1:2]))
+#DF<-as.data.frame(scale(World_Indicators_Scaling[,1:2]))
+World_Indicators_GBS$Country<-World_Indicators_GB$Country
+
+#GDP & Business Tax Rate
+
+
+#Determine the optimal number of clusters using the silhouette method
+fviz_nbclust(World_Indicators_GBS[,1:2], kmeans, method = "silhouette")
+
+#Determine the optimal number of clusters using the elbow method
+fviz_nbclust(World_Indicators_GBS[,1:2], kmeans, method = "wss")
+
+#Find the kmeans of GDP and Infant Mortality
+set.seed(55)
+cluster.World_Indicators_GBS <- kmeans(World_Indicators_GBS[,1:2], 2, 
+                                       nstart = 20)
+cluster.World_Indicators_GBS
+
+#Graph of the GDP & Business Tax Rate Clustered
+cluster.World_Indicators_GBS$cluster <- as.factor(
+  cluster.World_Indicators_GBS$cluster)
+colnames(World_Indicators_GBS)
+WIGBS_Clustered <- plot_ly(World_Indicators_GBS, x = ~GDP, 
+                           y = ~Business.Tax.Rate, 
+                           color = ~cluster.World_Indicators_GBS$cluster)
+WIGBS_Clustered <- WIGBS_Clustered %>% add_markers()
+WIGBS_Clustered <- WIGBS_Clustered %>% layout(scene = 
+                                                list(xaxis = list(title = 'X1'),
+                                                     yaxis = list(title = 'X2')))
+WIGBS_Clustered <- WIGBS_Clustered %>% layout(
+  title = 'GDP vs. Business Tax Rate')
+
+WIGBS_Clustered # plot 
+
+#Hierarchical Clustering
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm_Gdp_BTR <- dist(World_Indicators_GBS[,1:2], method = 'euclidean')
+
+# Hierarchical Clustering 
+
+set.seed(50)
+hc_Gdp_BTR <- hclust(dm_Gdp_BTR,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc_Gdp_BTR_dendogram <- plot(hc_Gdp_BTR, main = "GDP Vs Buisness Tax Rate Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+fit_Gdp_BTR <- cutree(hc_Gdp_BTR, k = 2)
+#table(fit8, Data8$Class)
+rect.hclust(hc_Gdp_BTR, k = 2, border = "red")
+
+#Binding the data
+World_Indicators_GBS <- cbind(World_Indicators_GBS, fit_Gdp_BTR)
+
+#Plotting hierarchical clusters
+
+World_IndicatorsGBS_hc_plot <- plot_ly(World_Indicators_GBS, x = ~GDP, y = ~Business.Tax.Rate, color = ~as.factor(World_Indicators_GBS$fit_Gdp_BTR))
+World_IndicatorsGBS_hc_plot <- World_IndicatorsGBS_hc_plot %>% add_markers()
+World_IndicatorsGBS_hc_plot <- World_IndicatorsGBS_hc_plot %>% layout(title = 'GDP Vs Buisness Tax Rate hierarchical Clustered')
+World_IndicatorsGBS_hc_plot
+
+#Self Organizing Maps
+World_IndicatorsGBS_SOM <- as.matrix(scale(World_Indicators_GBS[,1:2]))
+World_Indicators_GBS_Grid <- somgrid(xdim = 5, ydim = 5, topo = "rectangular")
+set.seed(55)
+World_Indicators_GBS_SOM_Model <- som(X = World_IndicatorsGBS_SOM, 
+                                      grid = World_Indicators_GBS_Grid)
+
+#Plot the model
+plot(World_Indicators_GBS_SOM_Model, type = "counts")
+
+plot(World_Indicators_GBS_SOM_Model, type = "mapping")
+
+plot(World_Indicators_GBS_SOM_Model, type = "codes")
+
+#ADD INTERNAL VALIDATION 
+#validation for 2 clusters
+calinhara(World_Indicators_GBS[,1:2],cluster.World_Indicators_GBS$cluster,cn=2)
+#validation for 3
+cluster.World_Indicators_GBS_3 <- kmeans(World_Indicators_GBS[,1:2], 3, 
+                                         nstart = 20)
+cluster.World_Indicators_GBS_3
+calinhara(World_Indicators_GBS[,1:2],cluster.World_Indicators_GBS_3$
+            cluster,cn=3)
+
+#validation for 4
+cluster.World_Indicators_GBS_4 <- kmeans(World_Indicators_GBS[,1:2], 4, 
+                                         nstart = 20)
+cluster.World_Indicators_GBS_4
+calinhara(World_Indicators_GBS[,1:2],cluster.World_Indicators_GBS_4$
+            cluster,cn=4)
+colnames(World_Indicators_GBS)
+##################### Post CH Value Plot ##########################
+colnames(World_Indicators_GBS)
+WIGBS_Clustered_CH <- plot_ly(World_Indicators_GBS, x = ~GDP, 
+                              y = ~Business.Tax.Rate, 
+                              color = ~cluster.World_Indicators_GBS_4$cluster)
+WIGBS_Clustered_CH <- WIGBS_Clustered_CH %>% add_markers()
+WIGBS_Clustered_CH <- WIGBS_Clustered_CH %>% layout(scene = 
+                                                      list(xaxis = list(title = 'X1'),
+                                                           yaxis = list(title = 'X2')))
+WIGBS_Clustered_CH <- WIGBS_Clustered_CH %>% layout(
+  title = 'GDP vs. Business Tax Rate')
+
+WIGBS_Clustered_CH # plot 
+
+
+#Add dunn index
+
+unique(World_Indicators_GBS$Clust)
+typeof(cluster.World_Indicators_GBS$cluster)
+cluster.World_Indicators_GBS$cluster<-as.numeric(
+  cluster.World_Indicators_GBS$cluster)
+cluster.stats(dist(World_Indicators_GBS[,1:2],method ='euclidean'),
+              cluster.World_Indicators_GBS$cluster)
+
+cluster.World_Indicators_GBS$cluster<-as.numeric(
+  cluster.World_Indicators_GBS$cluster)
+
+x=dunn(clusters = cluster.World_Indicators_GBS$cluster, 
+       Data = World_Indicators_GBS[,1:2])
+cat("The value for dunn index is ,",x,"")
+
+#Combine clusters with original table
+World_Indicators_GBS$Clust <- cluster.World_Indicators_GBS$cluster
+World_Indicators_GBS$Clust_CH<-cluster.World_Indicators_GBS_4$cluster
+
+#China, Japan, and USA represent cluster 1, all other countries (excluding NA) are represented by cluster 2.
+
+#Part 3
+
+colnames(World_Indicators_GBS)
+World_Indicators_GBS_Sub1<-subset(World_Indicators_GBS,Clust_CH==1)
+World_Indicators_GBS_Sub2<-subset(World_Indicators_GBS,Clust_CH==2)
+World_Indicators_GBS_Sub3<-subset(World_Indicators_GBS,Clust_CH==3)
+World_Indicators_GBS_Sub4<-subset(World_Indicators_GBS,Clust_CH==4)
+print(World_Indicators_GBS_Sub1,World_Indicators_GBS_Sub2,World_Indicators_GBS_Sub3,World_Indicators_GBS_Sub4)
+
+
+
+```
+#GDP VS Business Tax Rate
+Countries with low gdp have business tax rate varying towards both sides of the axis, Tax rates seem average or minimal in high gdp countries but they're higher in countries with low gdp.
+```{r}
+#Analysis 4
+
+#Data
+#World_Indicators <- read.csv("/Users/kailash/Downloads/World Indicators (2).csv")
+
+#Male vs Female Life Expectancy vs. GDP
+
+#Clean the data to only include required columns
+World_Indicators_FM<- World_Indicators %>% select(GDP,13,14,21)
+names(World_Indicators_FM)
+typeof(World_Indicators_FM$Life.Expectancy.Female)
+World_Indicators_FM<-na.omit(World_Indicators_FM)
+
+World_IndicatorsFM<-as.data.frame(scale(World_Indicators_FM[,1:3]))
+#DF<-as.data.frame(scale(World_Indicators_Scaling[,1:2]))
+World_IndicatorsFM$Country<-World_Indicators_FM$Country
+
+#Determine the optimal number of clusters using the silhouette method
+fviz_nbclust(World_IndicatorsFM[,1:3], kmeans, method = "silhouette")
+
+#Determine the optimal number of clusters using the elbow method
+fviz_nbclust(World_IndicatorsFM[,1:3], kmeans, method = "wss")
+
+#Find the kmeans of GDP and Infant Mortality
+set.seed(55)
+typeof(World_IndicatorsFM[1])
+colnames(World_IndicatorsFM)
+cluster.World_IndicatorsFM <- kmeans(World_IndicatorsFM[,1:3], 2, nstart = 20)
+cluster.World_IndicatorsFM
+
+#Graph of the GDP & Life of Male/Female
+cluster.World_IndicatorsFM$cluster <- as.factor(cluster.World_IndicatorsFM$cluster)
+
+FM_Clustered <- plot_ly(World_IndicatorsFM, x = ~Life.Expectancy.Female, y = ~`Life.Expectancy.Male`, z = ~GDP, color = ~cluster.World_IndicatorsFM$cluster)
+FM_Clustered <- FM_Clustered %>% add_markers()
+FM_Clustered <- FM_Clustered %>% layout(scene = list(xaxis = list(title = 'Female Life Expectancy'),
+                                                     yaxis = list(title = 'Male Life Expectancy'),
+                                                     zaxis = list(title = 'GDP')))
+FM_Clustered <- FM_Clustered %>% layout(title = 'Female vs. Male Life Expectancy vs. GDP Clustered')
+
+FM_Clustered
+
+#Combine clusters with original table
+World_IndicatorsFM$Clust <- cluster.World_IndicatorsFM$cluster
+
+#Hierarchical Clustering
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm_Gdp_FM <- dist(World_IndicatorsFM[,1:2], method = 'euclidean')
+
+# Hierarchical Clustering 
+
+set.seed(50)
+hc_Gdp_FM <- hclust(dm_Gdp_FM,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc_Gdp_FM_dendogram <- plot(hc_Gdp_FM, main = "GDP Vs Life Expectancy of both Male and Female Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+fit_Gdp_FM <- cutree(hc_Gdp_FM, k = 2)
+#table(fit8, Data8$Class)
+rect.hclust(hc_Gdp_FM, k = 2, border = "red")
+
+#Binding the data
+World_IndicatorsFM <- cbind(World_IndicatorsFM, fit_Gdp_FM)
+
+#Plotting hierarchical clusters
+
+World_IndicatorsFM_hc_plot <- plot_ly(World_IndicatorsFM, x = ~Life.Expectancy.Female, y = ~`Life.Expectancy.Male`, z = ~GDP, color = ~as.factor(World_IndicatorsFM$fit_Gdp_FM))
+World_IndicatorsFM_hc_plot <- World_IndicatorsFM_hc_plot %>% add_markers()
+World_IndicatorsFM_hc_plot <- World_IndicatorsFM_hc_plot %>% layout(title = 'GDP Vs Life Expectancy of both Male and Female')
+World_IndicatorsFM_hc_plot
+
+#In general, countries male and female life expectancies have a positive linear relationship and have a somewhat positive linear relationship with GDP.
+
+#Self Organizing Maps - 
+
+#Create the model
+World_IndicatorsFM_SOM <- as.matrix(scale(World_IndicatorsFM[,1:3]))
+World_IndicatorsFM_Grid <- somgrid(xdim = 5, ydim = 5, topo = "rectangular")
+set.seed(55)
+World_IndicatorsFM_SOM_Model <- som(X = World_IndicatorsFM_SOM, grid = World_IndicatorsFM_Grid)
+
+#Plot the model
+plot(World_IndicatorsFM_SOM_Model, type = "counts")
+
+plot(World_IndicatorsFM_SOM_Model, type = "mapping")
+
+plot(World_IndicatorsFM_SOM_Model, type = "codes")
+
+#############
+#ADD INTERNAL VALIDATION 
+#validation for 2 clusters
+calinhara(World_IndicatorsFM[,1:3],cluster.World_IndicatorsFM$cluster,cn=2)
+#validation for 3
+cluster.World_IndicatorsFM_3 <- kmeans(World_IndicatorsFM[,1:3], 3, nstart = 20)
+cluster.World_IndicatorsFM_3
+calinhara(World_IndicatorsFM[,1:3],cluster.World_IndicatorsFM_3$cluster,cn=3)
+
+#validation for 4
+cluster.World_IndicatorsFM_4 <- kmeans(World_IndicatorsFM[,1:3], 4, nstart = 20)
+cluster.World_IndicatorsFM_4
+calinhara(World_IndicatorsFM[,1:3],cluster.World_IndicatorsFM_4$cluster,cn=4)
+
+##################### Post CH Value Plot ##########################
+#Graph of the GDP & Infant Mortality Clustered
+cluster.World_IndicatorsFM_4$cluster <- as.factor(cluster.World_IndicatorsFM_4$
+                                                    cluster)
+
+FM_Clustered_4 <- plot_ly(World_IndicatorsFM, x = ~Life.Expectancy.Female, 
+                          y = ~Life.Expectancy.Male, 
+                          z = ~GDP, color = ~cluster.World_IndicatorsFM_4$
+                            cluster)
+FM_Clustered_4 <- FM_Clustered_4 %>% add_markers()
+FM_Clustered_4 <- FM_Clustered_4 %>% layout(scene = 
+                                              list(xaxis = 
+                                                     list(title = 'Female Life Expectancy'),
+                                                     yaxis = list(title = 'Male Life Expectancy'),
+                                                     zaxis = list(title = 'GDP')))
+FM_Clustered_4 <- FM_Clustered_4 %>% 
+  layout(title = 'Female vs. Male Life Expectancy vs. GDP Clustered')
+
+FM_Clustered_4
+
+#add dunn index
+unique(World_IndicatorsFM$Clust)
+typeof(cluster.World_IndicatorsFM$cluster)
+cluster.World_IndicatorsFM$cluster<-as.numeric(
+  cluster.World_IndicatorsFM$cluster)
+cluster.stats(dist(World_IndicatorsFM[,1:3],method ='euclidean'),
+              cluster.World_IndicatorsFM$cluster)
+
+#cluster.World_IndicatorsGI$cluster<-as.numeric(cluster.World_IndicatorsGI$cluster)
+
+x=dunn(clusters = cluster.World_IndicatorsFM$cluster, 
+       Data = World_IndicatorsFM[,1:3])
+cat("The value for dunn index is ,",x,"")
+
+#Combine clusters with original table
+World_IndicatorsFM$Clust <- cluster.World_IndicatorsFM$cluster
+World_IndicatorsFM$Clust_CH<-cluster.World_IndicatorsFM_4$cluster
+#China, Japan, and USA represent cluster 1, all other countries (excluding NA) are represented by cluster 2.
+World_IndicatorsFM_Sub1<-subset(World_IndicatorsFM,Clust_CH==1)
+World_IndicatorsFM_Sub2<-subset(World_IndicatorsFM,Clust_CH==2)
+World_IndicatorsFM_Sub3<-subset(World_IndicatorsFM,Clust_CH==3)
+World_IndicatorsFM_Sub4<-subset(World_IndicatorsFM,Clust_CH==4)
+print(World_IndicatorsFM_Sub1,World_IndicatorsFM_Sub2,World_IndicatorsFM_Sub3,World_IndicatorsFM_Sub4)
+
+```
+Most countries with less female life expectancy are countries that have low GDP. Male life expectency is higher is countries where they have a higher GDP.
+
+```{r Analysis 5}
+World_Indicators_GIN<-World_Indicators %>% select(GDP,Internet.Usage,Country)
+#World_Indicators_GI<- World_Indicators %>% select(GDP,Internet.Usage,                                                  Country)
+typeof(World_Indicators_GIN$Internet.Usage)
+World_Indicators_GIN<-na.omit(World_Indicators_GIN)
+
+World_IndicatorsGIN<-as.data.frame(scale(World_Indicators_GIN[,1:2]))
+#DF<-as.data.frame(scale(World_Indicators_Scaling[,1:2]))
+World_IndicatorsGIN$Country<-World_Indicators_GIN$Country
+library(fpc)
+library(cluster)
+library(factoextra)
+#Determine the optimal number of clusters using the silhouette method
+
+fviz_nbclust(World_IndicatorsGIN[,1:2], kmeans, method = "silhouette")
+
+#Determine the optimal number of clusters using the elbow method
+fviz_nbclust(World_IndicatorsGIN[,1:2], kmeans, method = "wss")
+
+#Find the kmeans of GDP and Infant Mortality
+set.seed(55)
+cluster.World_IndicatorsGIN <- kmeans(World_IndicatorsGIN[,1:2], 2, nstart = 20)
+cluster.World_IndicatorsGIN
+set.seed(55)
+cluster.World_IndicatorsGIN_sil <- kmeans(World_IndicatorsGIN[,1:2], 10, nstart = 20)
+cluster.World_IndicatorsGIN_sil
+#Graph of the GDP & Infant Mortality Clustered
+cluster.World_IndicatorsGIN$cluster <- as.factor(cluster.World_IndicatorsGIN$cluster)
+colnames(World_IndicatorsGIN)
+WIGIN_Clustered <- plot_ly(World_IndicatorsGIN, x = ~GDP, y = ~Internet.Usage, color = ~cluster.World_IndicatorsGIN$cluster)
+WIGIN_Clustered <- WIGIN_Clustered %>% add_markers()
+WIGIN_Clustered <- WIGIN_Clustered %>% layout(scene = list(xaxis = list(title = 'X1'),
+                                                           yaxis = list(title = 'X2')))
+WIGIN_Clustered <- WIGIN_Clustered %>% layout(title = 'GDP vs. Internet Usage Clustered')
+
+WIGIN_Clustered
+############Silhoutte Graph#####################
+cluster.World_IndicatorsGIN_sil$cluster <- as.factor(cluster.World_IndicatorsGIN_sil$cluster)
+
+WIGIN_Clustered_Sil <- plot_ly(World_IndicatorsGIN, x = ~GDP, 
+                               y = ~Internet.Usage, 
+                               color = ~cluster.World_IndicatorsGIN_sil$cluster)
+WIGIN_Clustered_Sil <- WIGIN_Clustered_Sil %>% add_markers()
+WIGIN_Clustered_Sil <- WIGIN_Clustered_Sil %>% layout(
+  scene = list(xaxis = list(title = 'X1'),
+                                                           yaxis = list(title = 'X2')))
+WIGIN_Clustered_Sil <- WIGIN_Clustered_Sil %>% 
+  layout(title = 'GDP vs. Internet Usage Clustered')
+
+WIGIN_Clustered_Sil
+
+#Combine clusters with original table
+World_IndicatorsGIN$Clust_1 <- cluster.World_IndicatorsGIN$cluster
+World_IndicatorsGIN$Clust_Sil <- cluster.World_IndicatorsGIN_sil$cluster
+
+#Similar to GDP and Infant Mortality... China, Japan, USA in cluster 1 and the rest in cluster 2.
+#ADD INTERNAL VALIDATION 
+#validation for 2 clusters
+calinhara(World_IndicatorsGIN[,1:2],cluster.World_IndicatorsGIN$cluster,cn=2)
+#validation for 3
+cluster.World_IndicatorsGIN_3 <- kmeans(World_IndicatorsGIN[,1:2], 3, 
+                                         nstart = 20)
+cluster.World_IndicatorsGIN_3
+calinhara(World_IndicatorsGIN[,1:2],cluster.World_IndicatorsGIN$cluster,cn=3)
+
+#validation for 4
+cluster.World_IndicatorsGIN_4 <- kmeans(World_IndicatorsGIN[,1:2], 4, 
+                                         nstart = 20)
+cluster.World_IndicatorsGIN_4
+
+calinhara(World_IndicatorsGIN[,1:2],cluster.World_IndicatorsGIN_4$
+            cluster,cn=4)
+#colnames(World_Indicators_GHS)
+#validation for 10
+cluster.World_IndicatorsGIN_10 <- kmeans(World_IndicatorsGIN[,1:2], 10, 
+                                        nstart = 20)
+cluster.World_IndicatorsGIN_10
+
+calinhara(World_IndicatorsGIN[,1:2],cluster.World_IndicatorsGIN_10$
+            cluster,cn=10)
+
+##################### Post CH Value Plot ##########################
+WIINS_Clustered_CH <- plot_ly(World_IndicatorsGIN, x = ~GDP, 
+                              y = ~Internet.Usage, 
+                              color = ~cluster.World_IndicatorsGIN_10$cluster)
+WIINS_Clustered_CH <- WIINS_Clustered_CH %>% add_markers()
+WIINS_Clustered_CH <- WIINS_Clustered_CH %>% layout(scene = 
+                                                      list(xaxis = list(title = 'X1'),
+                                                           yaxis = list(title = 'X2')))
+WIINS_Clustered_CH <- WIINS_Clustered_CH %>% layout(
+  title = 'GDP vs. Internet Usage')
+
+WIINS_Clustered_CH # plot 
+
+
+
+#typeof(cluster.World_IndicatorsGI)
+
+#add dunn index
+#install.packages("philentropy")
+#install.packages("clValid")
+
+library(philentropy)
+library(clValid)
+
+unique(World_IndicatorsGIN$Clust)
+typeof(cluster.World_IndicatorsGIN$cluster)
+cluster.World_IndicatorsGIN$cluster<-as.numeric(
+  cluster.World_Indicators_GHS$cluster)
+library(clValid)
+#cluster.stats(dist(World_IndicatorsGIN[,1:2]))
+#cluster.stats(dist(World_IndicatorsGIN[,1:2],method ='euclidean'),
+ #             cluster.World_IndicatorsGIN$cluster)
+
+#cluster.World_IndicatorsGIN$cluster<-as.numeric cluster.World_IndicatorsGIN$cluster)
+
+x=dunn(clusters = cluster.World_IndicatorsGIN$cluster, 
+       Data = World_IndicatorsGIN[,1:2])
+cat("dunn index is, ",x,"")
+#Combine clusters with original table
+#World_IndicatorsGIN$Clust <- cluster.World_IndicatorsGIN$cluster
+World_IndicatorsGIN$Clust_CH<-cluster.World_IndicatorsGIN_4$cluster
+
+#China, Japan, and USA represent cluster 1, all other countries (excluding NA) are represented by cluster 2.
+
+#Part 3
+#colnames(World_IndicatorsGIN)
+
+#World_IndicatorsGIN_Sub1<-subset(World_IndicatorsGIN,Clust==1)
+#World_IndicatorsGIN_Sub2<-subset(World_IndicatorsGIN,Clust==2)
+
+#unique(World_IndicatorsGIN$Clust)
+
+#Self Organizing Maps - 
+
+#Create the model
+World_IndicatorsGIN_SOM <- as.matrix(scale(World_IndicatorsGIN[,1:2]))
+World_IndicatorsGIN_Grid <- somgrid(xdim = 5, ydim = 5, topo = "rectangular")
+set.seed(55)
+World_IndicatorsGIN_SOM_Model <- som(X = World_IndicatorsGIN_SOM, grid = World_IndicatorsGIN_Grid)
+
+#Plot the model
+plot(World_IndicatorsGIN_SOM_Model, type = "counts")
+
+plot(World_IndicatorsGIN_SOM_Model, type = "mapping")
+
+plot(World_IndicatorsGIN_SOM_Model, type = "codes")
+```

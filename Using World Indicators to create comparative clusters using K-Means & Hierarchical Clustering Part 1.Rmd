@@ -1,0 +1,894 @@
+---
+title: "Project 1-Task 1"
+Group Members: Aartee Simran
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+markdown::markdownToHTML
+```
+
+```{r}
+#Libraries
+library(ggplot2)
+library(ggdendro)
+library(plotly)
+library(NbClust)
+library(factoextra)
+library(ClusterR)
+library(kohonen)
+```
+
+#Data Loading
+```{r}
+Data1<- read.csv('D:/FDA/Project 1/Data1.csv')
+Data2<- read.csv('D:/FDA/Project 1/Data2.csv')
+Data3<- read.csv('D:/FDA/Project 1/Data3.csv')
+Data4<- read.csv('D:/FDA/Project 1/Data4.csv')
+Data5<- read.csv('D:/FDA/Project 1/Data5.csv')
+Data6<- read.csv('D:/FDA/Project 1/Data6.csv')
+Data7<- read.csv('D:/FDA/Project 1/Data7.csv')
+Data8<- read.csv('D:/FDA/Project 1/Data8.csv')
+World_Indicators<- read.csv('D:/FDA/Project 1/World Indicators.csv')
+```
+
+
+#Task-1
+```{r}
+#Data 1
+#Data1 <- read.csv("/Users/kailash/Downloads/Data1.csv")
+
+#Plotting Original clusters based on data set
+Data1_orginal <- plot_ly(Data1, x = ~X1, y = ~X2, z= ~X3,color = Data1$Class )
+Data1_orginal <- Data1_orginal %>% add_markers() 
+Data1_orginal <- Data1_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data1_orginal
+
+#Determining Optimal number of clusters
+#Data1_optimal_number <- fviz_nbclust(Data1[2:4], kmeans, method = "silhouette")
+#By the above code we can see that the optimal number of clusters for this data set is 6
+
+#To find the number of clusters
+clusters_1 <- length(unique(Data1$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data1_Kmeans <- kmeans(Data1[2:4], clusters_1, nstart = 30) 
+Data1_Kmeans$cluster
+kmeans_cluster1 <- Data1_Kmeans$cluster
+Data1 <- cbind(Data1, kmeans_cluster1)
+
+
+#To show K-Means table before plotting
+table(kmeans_cluster1, Data1$Class)
+
+
+#Plotting K-Means Cluster with optimal number
+Data1_km_plot <- plot_ly(Data1, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(kmeans_cluster1))
+Data1_km_plot <- Data1_km_plot %>% add_markers()
+Data1_km_plot <- Data1_km_plot %>% layout(title = 'Data 1 K-Means Clustered')
+Data1_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm1 <- dist(Data1[,2:4], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 1
+
+set.seed(50)
+hc1 <- hclust(dm1,method = "complete")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc1_dendogram <- plot(hc1, main = "Data 1 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+fit1 <- cutree(hc1, k = clusters_1)
+table(fit1, Data1$Class)
+rect.hclust(hc1, k = clusters_1, border = "red")
+
+#Binding the data
+Data1 <- cbind(Data1, fit1)
+
+#Plotting hierarchical clusters
+
+Data1_hc_plot <- plot_ly(Data1, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(Data1$fit1))
+Data1_hc_plot <- Data1_hc_plot %>% add_markers()
+Data1_hc_plot <- Data1_hc_plot %>% layout(title = 'Data 1 hierarchical Clustered')
+Data1_hc_plot
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_1 <- external_validation(Data1$Class,Data1$kmeans_cluster1, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_1 <- external_validation(Data1$Class,Data1$kmeans_cluster1, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_1 <- external_validation(Data1$Class,Data1$kmeans_cluster1, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_1 <- external_validation(Data1$Class,Data1$fit1, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_1 <- external_validation(Data1$Class,Data1$fit1, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_1 <- external_validation(Data1$Class,Data1$fit1, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+
+#Self Organizing Maps - 
+
+#Create the model
+Data1_SOM <- as.matrix(scale(Data1[,2:4]))
+Data1_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data1_SOM_Model <- som(X = Data1_SOM, grid = Data1_Grid)
+
+#Plot the model
+plot(Data1_SOM_Model, type = "counts")
+
+plot(Data1_SOM_Model, type = "mapping")
+
+plot(Data1_SOM_Model, type = "codes")
+
+
+```
+#1.	“Data1” contains 3D numerical data distributed across 7 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with 100% accuracy using k = 7. Among additional validation techniques shown in the code, this is further substantiated using hierarchical clustering and external validation techniques including both the rand index (accuracy = 1) and jaccard index =1. Finally, by comparing the 3D plot of the original data vs. the 3D plot of the k-means clustered data and the hierarchical clustering plot, we can confirm, visually, that the data has been clustered appropriately and accurately using both K-means and hierarchical clustering. 
+```{r}
+#Data 2
+#Data2 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data2.csv")
+
+#Plotting Original clusters based on data set
+Data2_orginal <- plot_ly(Data2, x = ~X, y = ~Y, z= ~C,color = Data2$Class )
+Data2_orginal <- Data2_orginal %>% add_markers() 
+Data2_orginal <- Data2_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data2_orginal
+
+#Number of clusters on data set
+clusters_2 <- length(unique(Data2$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data2_Kmeans <- kmeans(Data2[2:4], clusters_2, nstart = 30) 
+Data2_Kmeans$cluster
+kmeans_cluster2 <- Data2_Kmeans$cluster
+Data2 <- cbind(Data2, kmeans_cluster2)
+
+#To show K-Means table before plotting
+table(kmeans_cluster2, Data2$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data2_km_plot <- plot_ly(Data2, x = ~X, y = ~Y, z = ~C, color = ~as.factor(kmeans_cluster2))
+Data2_km_plot <- Data2_km_plot %>% add_markers()
+Data2_km_plot <- Data2_km_plot %>% layout(title = 'Data 2 K-Means Clustered')
+Data2_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm2 <- dist(Data2[,2:4], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 1
+
+set.seed(50)
+hc2 <- hclust(dm2,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc2_dendogram <- plot(hc2, main = "Data 2 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+fit2 <- cutree(hc2, k = clusters_2)
+table(fit2, Data2$Class)
+rect.hclust(hc2, k = clusters_2, border = "red")
+
+#Binding the data
+Data2 <- cbind(Data2, fit2)
+
+#Plotting hierarchical clusters
+
+Data2_hc_plot <- plot_ly(Data2, x = ~X, y = ~Y, z = ~C, color = ~as.factor(Data2$fit2))
+Data2_hc_plot <- Data2_hc_plot %>% add_markers()
+Data2_hc_plot <- Data2_hc_plot %>% layout(title = 'Data 2 hierarchical Clustered')
+Data2_hc_plot
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_2 <- external_validation(Data2$Class,Data2$kmeans_cluster2, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_2 <- external_validation(Data2$Class,Data2$kmeans_cluster2, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_2 <- external_validation(Data2$Class,Data2$kmeans_cluster2, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_2 <- external_validation(Data2$Class,Data2$fit2, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_2 <- external_validation(Data2$Class,Data2$fit2, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_2 <- external_validation(Data2$Class,Data2$fit2, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#Self Organizing Maps
+
+#Create the model
+Data2_SOM <- as.matrix(scale(Data2[,2:4]))
+Data2_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data2_SOM_Model <- som(X = Data2_SOM, grid = Data2_Grid)
+
+#Plot the model
+plot(Data2_SOM_Model, type = "counts")
+
+plot(Data2_SOM_Model, type = "mapping")
+
+plot(Data2_SOM_Model, type = "codes")
+
+```
+#2.	“Data2” contains 3D numerical data distributed across 4 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with medium-high accuracy using k =4. Amongst additional validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means the rand index = .82 and the jaccard index = .555, whereas for hierarchical clustering the rand index = .86 and the jaccard index = .71. The inaccuracy can be visualized in the associated 3D plots showing the original data set clustered by class and the data set clustered by k-means. 
+
+```{r}
+#Data 3
+#Data3 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data3.csv")
+
+#Plotting Original clusters based on data set
+Data3_orginal <- plot_ly(Data3, x = ~X1, y = ~X2, z= ~X3,color = Data3$Class )
+Data3_orginal <- Data3_orginal %>% add_markers() 
+Data3_orginal <- Data3_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data3_orginal
+
+#Number of clusters on data set
+clusters_3 <- length(unique(Data3$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data3_Kmeans <- kmeans(Data3[2:4], clusters_3, nstart = 30) 
+Data3_Kmeans$cluster
+kmeans_cluster3 <- Data3_Kmeans$cluster
+Data3 <- cbind(Data3, kmeans_cluster3)
+
+#To show K-Means table before plotting
+table(kmeans_cluster3, Data3$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data3_km_plot <- plot_ly(Data3, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(kmeans_cluster3))
+Data3_km_plot <- Data3_km_plot %>% add_markers()
+Data3_km_plot <- Data3_km_plot %>% layout(title = 'Data 3 K-Means Clustered')
+Data3_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm3 <- dist(Data3[,2:4], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 1
+
+set.seed(50)
+hc3 <- hclust(dm3,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc3_dendogram <- plot(hc3, main = "Data 3 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+fit3 <- cutree(hc3, k = clusters_3)
+table(fit3, Data3$Class)
+rect.hclust(hc3, k = clusters_3, border = "red")
+
+#Binding the data
+Data3 <- cbind(Data3, fit3)
+
+#Plotting hierarchical clusters
+
+Data3_hc_plot <- plot_ly(Data3, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(Data3$fit3))
+Data3_hc_plot <- Data3_hc_plot %>% add_markers()
+Data3_hc_plot <- Data3_hc_plot %>% layout(title = 'Data 3 hierarchical Clustered')
+Data3_hc_plot
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_3 <- external_validation(Data3$Class,Data3$kmeans_cluster3, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_3 <- external_validation(Data3$Class,Data3$kmeans_cluster3, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_3 <- external_validation(Data3$Class,Data3$kmeans_cluster3, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_3 <- external_validation(Data3$Class,Data3$fit3, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_3 <- external_validation(Data3$Class,Data3$fit3, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_3 <- external_validation(Data3$Class,Data3$fit3, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#Self Organizing Maps - 
+
+#Create the model
+Data3_SOM <- as.matrix(scale(Data3[,2:4]))
+Data3_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data3_SOM_Model <- som(X = Data3_SOM, grid = Data3_Grid)
+
+#Plot the model
+plot(Data3_SOM_Model, type = "counts")
+
+plot(Data3_SOM_Model, type = "mapping")
+
+plot(Data3_SOM_Model, type = "codes")
+
+```
+#3.	“Data3” contains 3D numerical data distributed across 4 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with extremely high accuracy using k = 4. Amongst additional validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means the rand index = 1 and the jaccard index = 1, whereas for hierarchical clustering the rand index = .998 and the jaccard index = .99. The inaccuracy can be visualized in the associated dendrogram showing the partitions between the clusters where 1 data point from class 1 is incorrectly assigned to class 2. 
+```{r}
+#Data 4
+
+#Data4 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data4.csv")
+
+#Plotting Original clusters based on data set
+Data4_orginal <- plot_ly(Data4, x = ~X1, y = ~X2, z= ~X3,color = Data4$Class )
+Data4_orginal <- Data4_orginal %>% add_markers() 
+Data4_orginal <- Data4_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data4_orginal
+
+#Number of clusters on data set
+clusters_4 <- length(unique(Data4$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data4_Kmeans <- kmeans(Data4[2:4], clusters_4, nstart = 30) 
+Data4_Kmeans$cluster
+kmeans_cluster4 <- Data4_Kmeans$cluster
+Data4 <- cbind(Data4, kmeans_cluster4)
+
+#To show K-Means table before plotting
+table(kmeans_cluster4, Data4$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data4_km_plot <- plot_ly(Data4, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(kmeans_cluster4))
+Data4_km_plot <- Data4_km_plot %>% add_markers()
+Data4_km_plot <- Data4_km_plot %>% layout(title = 'Data 4 K-Means Clustered')
+Data4_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm4 <- dist(Data4[,2:4], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 1
+
+set.seed(50)
+hc4 <- hclust(dm4,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc4_dendogram <- plot(hc4, main = "Data 4 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+#Since there is only 2 clusters tou couldn't see the cut tree line
+fit4 <- cutree(hc4, k = clusters_4)
+table(fit4, Data4$Class)
+rect.hclust(hc4, k = clusters_4, border = "red")
+
+#Binding the data
+Data4 <- cbind(Data4, fit4)
+
+#Plotting hierarchical clusters
+
+Data4_hc_plot <- plot_ly(Data4, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(Data4$fit4))
+Data4_hc_plot <- Data4_hc_plot %>% add_markers()
+Data4_hc_plot <- Data4_hc_plot %>% layout(title = 'Data 4 hierarchical Clustered')
+Data4_hc_plot
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_4 <- external_validation(Data4$Class,Data4$kmeans_cluster4, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_4 <- external_validation(Data4$Class,Data4$kmeans_cluster4, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_4 <- external_validation(Data4$Class,Data4$kmeans_cluster4, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_4 <- external_validation(Data4$Class,Data4$fit4, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_4 <- external_validation(Data4$Class,Data4$fit4, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_4 <- external_validation(Data4$Class,Data4$fit4, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+#Self Organizing Maps - 
+
+#Create the model
+Data4_SOM <- as.matrix(scale(Data4[,2:4]))
+Data4_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data4_SOM_Model <- som(X = Data4_SOM, grid = Data4_Grid)
+
+#Plot the model
+plot(Data4_SOM_Model, type = "counts")
+
+plot(Data4_SOM_Model, type = "mapping")
+
+plot(Data4_SOM_Model, type = "codes")
+
+```
+# “Data4” contains 3D numerical data distributed across 2 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with moderate accuracy using k =2. Amongst other validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means the rand index = .55 and the jaccard index = .375, whereas for hierarchical clustering the rand index = .64 and the jaccard index = .51. The inaccuracy can be visualized in the associated 3D plots showing the original data set clustered by class and the data set clustered by k-means. This is a unique data set in which there are two conjoining rings, we expect inaccuracy stems from the centroids being established at the center of the two rings without any class differentiation. 
+```{r}
+#Data 5
+
+#Data5 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data5.csv")
+
+#Plotting Original clusters based on data set
+Data5_orginal <- plot_ly(Data5, x = ~X1, y = ~X2, z= ~X3,color = Data5$Class )
+Data5_orginal <- Data5_orginal %>% add_markers() 
+Data5_orginal <- Data5_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data5_orginal
+
+#Number of clusters on data set
+clusters_5 <- length(unique(Data5$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data5_Kmeans <- kmeans(Data5[2:4], clusters_5, nstart = 30) 
+Data5_Kmeans$cluster
+kmeans_cluster5 <- Data5_Kmeans$cluster
+Data5<- cbind(Data5, kmeans_cluster5)
+
+#To show K-Means table before plotting
+table(kmeans_cluster5, Data5$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data5_km_plot <- plot_ly(Data5, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(kmeans_cluster5))
+Data5_km_plot <- Data5_km_plot %>% add_markers()
+Data5_km_plot <- Data5_km_plot %>% layout(title = 'Data 5 K-Means Clustered')
+Data5_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm5 <- dist(Data5[,2:4], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 1
+
+set.seed(50)
+hc5 <- hclust(dm5,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc5_dendogram <- plot(hc5, main = "Data 5 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+#Since there is only 2 clusters we couldn't see the cut tree line
+fit5 <- cutree(hc5, k = clusters_5)
+table(fit5, Data5$Class)
+rect.hclust(hc5, k = clusters_5, border = "red")
+
+#Binding the data
+Data5 <- cbind(Data5, fit5)
+
+#Plotting hierarchical clusters
+
+Data5_hc_plot <- plot_ly(Data5, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(Data5$fit5))
+Data5_hc_plot <- Data5_hc_plot %>% add_markers()
+Data5_hc_plot <- Data5_hc_plot %>% layout(title = 'Data 5 hierarchical Clustered')
+Data5_hc_plot
+
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_5 <- external_validation(Data5$Class,Data5$kmeans_cluster5, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_5 <- external_validation(Data5$Class,Data5$kmeans_cluster5, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_5 <- external_validation(Data5$Class,Data5$kmeans_cluster5, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_5 <- external_validation(Data5$Class,Data5$fit5, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_5 <- external_validation(Data5$Class,Data5$fit5, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_5 <- external_validation(Data5$Class,Data5$fit5, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#Self Organizing Maps - 
+
+#Create the model
+Data5_SOM <- as.matrix(scale(Data5[,2:4]))
+Data5_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data5_SOM_Model <- som(X = Data5_SOM, grid = Data5_Grid)
+
+#Plot the model
+plot(Data5_SOM_Model, type = "counts")
+
+plot(Data5_SOM_Model, type = "mapping")
+
+plot(Data5_SOM_Model, type = "codes")
+
+
+```
+#5.	“Data5” contains 3D numerical data distributed across 2 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with moderate accuracy using k = 2. Amongst other validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means the rand index = .59 and the jaccard index = .48, whereas for hierarchical clustering the rand index = .55 and the jaccard index = .46. The inaccuracy can be visualized in the associated 3D plots showing the original data set where there are two spherical data sets, one surrounded by the other. The k-means clustering method partitioned the data by cutting the first class of data in half and assigning the bottom half (corresponding to small X3 values) to class 1 and the upper half (corresponding to large X3 values) to class 2 and all of what should be class 2 to class 1. 
+
+```{r}
+#Data 6
+
+#Data6 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data6.csv")
+
+#Plotting Original clusters based on data set
+Data6_orginal <- plot_ly(Data6, x = ~X1, y = ~X2,color = Data6$Class )
+Data6_orginal <- Data6_orginal %>% add_markers() 
+Data6_orginal <- Data6_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data6_orginal
+
+#Number of clusters on data set
+clusters_6 <- length(unique(Data6$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data6_Kmeans <- kmeans(Data6[2:3], clusters_6, nstart = 30) 
+Data6_Kmeans$cluster
+kmeans_cluster6 <- Data6_Kmeans$cluster
+Data6<- cbind(Data6, kmeans_cluster6)
+
+#To show K-Means table before plotting
+table(kmeans_cluster6, Data6$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data6_km_plot <- plot_ly(Data6, x = ~X1, y = ~X2, color = ~as.factor(kmeans_cluster6))
+Data6_km_plot <- Data6_km_plot %>% add_markers()
+Data6_km_plot <- Data6_km_plot %>% layout(title = 'Data 6 K-Means Clustered')
+Data6_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm6 <- dist(Data6[,2:3], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 6
+
+set.seed(50)
+hc6 <- hclust(dm6,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc6_dendogram <- plot(hc6, main = "Data 6 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+#Since there is only 2 clusters we couldn't see the cut tree line
+fit6 <- cutree(hc6, k = clusters_6)
+table(fit6, Data6$Class)
+rect.hclust(hc6, k = clusters_6, border = "red")
+
+#Binding the data
+Data6 <- cbind(Data6, fit6)
+
+#Plotting hierarchical clusters
+
+Data6_hc_plot <- plot_ly(Data6, x = ~X1, y = ~X2, color = ~as.factor(Data6$fit6))
+Data6_hc_plot <- Data6_hc_plot %>% add_markers()
+Data6_hc_plot <- Data6_hc_plot %>% layout(title = 'Data 6 hierarchical Clustered')
+Data6_hc_plot
+
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_6 <- external_validation(Data6$Class,Data6$kmeans_cluster6, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_6 <- external_validation(Data6$Class,Data6$kmeans_cluster6, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_6 <- external_validation(Data6$Class,Data6$kmeans_cluster6, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_6 <- external_validation(Data6$Class,Data6$fit6, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_6 <- external_validation(Data6$Class,Data6$fit6, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_6 <- external_validation(Data6$Class,Data6$fit6, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+
+
+#Self Organizing Maps - 
+
+#Create the model
+Data6_SOM <- as.matrix(scale(Data6[,2:3]))
+Data6_Grid <- somgrid(xdim = 10, ydim = 10, topo = "rectangular")
+set.seed(55)
+Data6_SOM_Model <- som(X = Data6_SOM, grid = Data6_Grid)
+
+#Plot the model
+plot(Data6_SOM_Model, type = "counts")
+
+plot(Data6_SOM_Model, type = "mapping")
+
+plot(Data6_SOM_Model, type = "codes")
+
+```
+#6.	“Data6” contains 2D numerical data distributed across 2 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with high accuracy using k = 2. Amongst other validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means the rand index = .91 and the jaccard index = .83, whereas for hierarchical clustering the rand index = .53 and the jaccard index = .46. The inaccuracy can be visualized in the associated 2D plots showing the original data set clustered by class and the original data set clustered by k-means. The original classes had overlapping data and since k-means does not allow overlapping, the data was partitioned so as to have no overlapping, which resulted in some error. 
+```{r}
+#Data 7
+
+#Data7 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data7.csv")
+
+#Plotting Original clusters based on data set
+Data7_orginal <- plot_ly(Data7, x = ~X1, y = ~X2,color = Data7$Class )
+Data7_orginal <- Data7_orginal %>% add_markers() 
+Data7_orginal <- Data7_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data7_orginal
+
+#Number of clusters on data set
+clusters_7 <- length(unique(Data7$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data7_Kmeans <- kmeans(Data7[2:3], clusters_7, nstart = 30) 
+Data7_Kmeans$cluster
+kmeans_cluster7 <- Data7_Kmeans$cluster
+Data7<- cbind(Data7, kmeans_cluster7)
+
+#To show K-Means table before plotting
+table(kmeans_cluster7, Data7$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data7_km_plot <- plot_ly(Data7, x = ~X1, y = ~X2, color = ~as.factor(kmeans_cluster7))
+Data7_km_plot <- Data7_km_plot %>% add_markers()
+Data7_km_plot <- Data7_km_plot %>% layout(title = 'Data 7 K-Means Clustered')
+Data7_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm7 <- dist(Data7[,2:3], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 6
+
+set.seed(50)
+hc7 <- hclust(dm7,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc7_dendogram <- plot(hc7, main = "Data 7 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+#Since there is only 2 clusters we couldn't see the cut tree line
+fit7 <- cutree(hc7, k = clusters_7)
+table(fit7, Data7$Class)
+rect.hclust(hc7, k = clusters_7, border = "red")
+
+#Binding the data
+Data7 <- cbind(Data7, fit7)
+
+#Plotting hierarchical clusters
+
+Data7_hc_plot <- plot_ly(Data7, x = ~X1, y = ~X2, color = ~as.factor(Data7$fit7))
+Data7_hc_plot <- Data7_hc_plot %>% add_markers()
+Data7_hc_plot <- Data7_hc_plot %>% layout(title = 'Data 7 hierarchical Clustered')
+Data7_hc_plot
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_7 <- external_validation(Data7$Class,Data7$kmeans_cluster7, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_7 <- external_validation(Data7$Class,Data7$kmeans_cluster7, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_7 <- external_validation(Data7$Class,Data7$kmeans_cluster7, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_7 <- external_validation(Data7$Class,Data7$fit7, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_7 <- external_validation(Data7$Class,Data7$fit7, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_7 <- external_validation(Data7$Class,Data7$fit7, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+
+#Self Organizing Maps - 
+
+#Create the model
+Data7_SOM <- as.matrix(scale(Data7[,2:3]))
+Data7_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data7_SOM_Model <- som(X = Data7_SOM, grid = Data7_Grid)
+
+#Plot the model
+plot(Data7_SOM_Model, type = "counts")
+
+plot(Data7_SOM_Model, type = "mapping")
+
+plot(Data7_SOM_Model, type = "codes")
+
+
+
+
+```
+#7.	“Data7” contains 2D numerical data distributed across 6 classes. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with moderate-high accuracy using k = 6. Amongst other validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means the rand index = .82 and the jaccard index = .63, whereas for hierarchical clustering the rand index = .57 and the jaccard index = .47. The inaccuracy can be visualized in the associated 2D plots showing the original data set clustered by class and the original data set clustered by k-means. The original classes 1 and 2, being concentric circles, are not accurately modeled using k-means clustering as classes 3:6 are distributed at the corners of the 4 quadrants of the graph. 
+```{r}
+#Data 8
+
+#Data8 <- read.csv("/Users/kailash/Desktop/FDA/Project/Dataset/Data8.csv")
+
+
+#Plotting Original clusters based on data set
+Data8_orginal <- plot_ly(Data8, x = ~X1, y = ~X2, z= ~X3,color = Data8$Class )
+Data8_orginal <- Data8_orginal %>% add_markers() 
+Data8_orginal <- Data8_orginal %>% layout(title =  "Orginal Clusters based on data set")
+Data8_orginal
+
+#Number of clusters on data set
+clusters_8 <- length(unique(Data8$Class))
+
+#Using K-Means to find clusters by using optimal number of clusters
+set.seed(50)
+Data8_Kmeans <- kmeans(Data8[2:4], clusters_8, nstart = 30) 
+Data8_Kmeans$cluster
+kmeans_cluster8 <- Data8_Kmeans$cluster
+Data8<- cbind(Data8, kmeans_cluster8)
+
+#To show K-Means table before plotting
+table(kmeans_cluster8, Data8$Class)
+
+#Plotting K-Means Cluster with optimal number
+Data8_km_plot <- plot_ly(Data8, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(kmeans_cluster8))
+Data8_km_plot <- Data8_km_plot %>% add_markers()
+Data8_km_plot <- Data8_km_plot %>% layout(title = 'Data 8 K-Means Clustered')
+Data8_km_plot
+
+#Using Hierarchical analysis to plot the clusters
+
+#To find the distance between each clusters
+dm8 <- dist(Data8[,2:4], method = 'euclidean')
+
+# Hierarchical Clustering for Data Set 1
+
+set.seed(50)
+hc8 <- hclust(dm8,method = "average")
+
+#Plotting Dendogram for hierarchical cluster
+
+hc8_dendogram <- plot(hc8, main = "Data 8 Dendogram")
+
+#Using Cut-tree to identify the number of clusters
+
+abline(h = 3.3, col = "blue")
+#Since there is only 2 clusters we couldn't see the cut tree line
+fit8 <- cutree(hc8, k = clusters_8)
+table(fit8, Data8$Class)
+
+#Binding the data
+Data8 <- cbind(Data8, fit8)
+
+#Plotting hierarchical clusters
+
+Data8_hc_plot <- plot_ly(Data8, x = ~X1, y = ~X2, z = ~X3, color = ~as.factor(Data8$fit8))
+Data8_hc_plot <- Data8_hc_plot %>% add_markers()
+Data8_hc_plot <- Data8_hc_plot %>% layout(title = 'Data 8 hierarchical Clustered')
+Data8_hc_plot
+
+
+#External Validation
+
+library(ClusterR)
+
+#External Validation for K-Means
+Kmeans_exteranalValidation_8 <- external_validation(Data8$Class,Data8$kmeans_cluster8, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_8 <- external_validation(Data8$Class,Data8$kmeans_cluster8, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Kmeans_exteranalValidation_8 <- external_validation(Data8$Class,Data8$kmeans_cluster8, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+#External Validation for Hierarchical Clusters
+Hclust_exteranalValidation_8 <- external_validation(Data8$Class,Data8$fit8, 
+                                                    method = "adjusted_rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_8 <- external_validation(Data8$Class,Data8$fit8, 
+                                                    method = "rand_index",
+                                                    summary_stats = TRUE)
+Hclust_exteranalValidation_8 <- external_validation(Data8$Class,Data8$fit8, 
+                                                    method = "jaccard_index",
+                                                    summary_stats = TRUE)
+
+
+#Self Organizing Maps - 
+
+#Create the model
+Data8_SOM <- as.matrix(scale(Data8[,2:4]))
+Data8_Grid <- somgrid(xdim = 8, ydim = 8, topo = "rectangular")
+set.seed(55)
+Data8_SOM_Model <- som(X = Data8_SOM, grid = Data8_Grid)
+
+#Plot the model
+plot(Data8_SOM_Model, type = "counts")
+
+plot(Data8_SOM_Model, type = "mapping")
+
+plot(Data8_SOM_Model, type = "codes")
+
+```
+#8.	“Data8” contains 3D numerical data distributed across 1 class. As seen in the associated plots, by using k-means clustering algorithms we are able to cluster the data with 100% accuracy using k = 1. Amongst other validation techniques shown in the code, we utilized the jaccard and rand indices to externally validate our clustering techniques where for k-means and hierarchical clustering the rand index = 1 and the jaccard index = 1. We can further validate, visually, that the data has been clustered accurately by comparing the two associated 2D plots. 
